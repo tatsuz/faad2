@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <math.h>
+#include <string.h>
 #include <neaacdec.h>
 #include "audio.h"
 
@@ -51,6 +52,7 @@ audio_file *open_audio_file(char *infile, int samplerate, int channels,
     aufile->total_samples = 0;
     aufile->fileType = fileType;
     aufile->channelMask = channelMask;
+	aufile->base_PTS = 0.0;
 
     switch (outputFormat)
     {
@@ -116,6 +118,19 @@ int write_audio_file(audio_file *aufile, void *sample_buffer, int samples, int o
     }
 
     return 0;
+}
+
+int write_blank_audio_file(audio_file *aufile, int samples)
+{
+	int result, ret = 0;
+	int channels = (int)aufile->channels;
+	for (; samples > 1024*channels; samples -= 1024*channels) {
+		result = write_audio_file(aufile, NULL, 1024*channels, 0);
+		ret += result;
+		if (result != 1024*channels) return ret;
+	}
+	ret += write_audio_file(aufile, NULL, samples, 0);
+	return ret;
 }
 
 void close_audio_file(audio_file *aufile)
@@ -309,6 +324,7 @@ static int write_audio_16bit(audio_file *aufile, void *sample_buffer,
 
     aufile->total_samples += samples;
 
+	if(sample_buffer){
     if (aufile->channels == 6 && aufile->channelMask)
     {
         for (i = 0; i < samples; i += aufile->channels)
@@ -334,8 +350,11 @@ static int write_audio_16bit(audio_file *aufile, void *sample_buffer,
         data[i*2] = (char)(sample_buffer16[i] & 0xFF);
         data[i*2+1] = (char)((sample_buffer16[i] >> 8) & 0xFF);
     }
+	}else{
+		memset(data, 0, samples * aufile->bits_per_sample/8);
+	}
 
-    ret = fwrite(data, samples, aufile->bits_per_sample/8, aufile->sndfile);
+    ret = fwrite(data, aufile->bits_per_sample/8, samples, aufile->sndfile);
 
     if (data) free(data);
 
@@ -352,6 +371,7 @@ static int write_audio_24bit(audio_file *aufile, void *sample_buffer,
 
     aufile->total_samples += samples;
 
+	if(sample_buffer){
     if (aufile->channels == 6 && aufile->channelMask)
     {
         for (i = 0; i < samples; i += aufile->channels)
@@ -378,8 +398,11 @@ static int write_audio_24bit(audio_file *aufile, void *sample_buffer,
         data[i*3+1] = (char)((sample_buffer24[i] >> 8) & 0xFF);
         data[i*3+2] = (char)((sample_buffer24[i] >> 16) & 0xFF);
     }
+	}else{
+		memset(data, 0, samples * aufile->bits_per_sample/8);
+	}
 
-    ret = fwrite(data, samples, aufile->bits_per_sample/8, aufile->sndfile);
+    ret = fwrite(data, aufile->bits_per_sample/8, samples, aufile->sndfile);
 
     if (data) free(data);
 
@@ -396,6 +419,7 @@ static int write_audio_32bit(audio_file *aufile, void *sample_buffer,
 
     aufile->total_samples += samples;
 
+	if(sample_buffer){
     if (aufile->channels == 6 && aufile->channelMask)
     {
         for (i = 0; i < samples; i += aufile->channels)
@@ -423,8 +447,11 @@ static int write_audio_32bit(audio_file *aufile, void *sample_buffer,
         data[i*4+2] = (char)((sample_buffer32[i] >> 16) & 0xFF);
         data[i*4+3] = (char)((sample_buffer32[i] >> 24) & 0xFF);
     }
+	}else{
+		memset(data, 0, samples * aufile->bits_per_sample/8);
+	}
 
-    ret = fwrite(data, samples, aufile->bits_per_sample/8, aufile->sndfile);
+    ret = fwrite(data, aufile->bits_per_sample/8, samples, aufile->sndfile);
 
     if (data) free(data);
 
@@ -441,6 +468,7 @@ static int write_audio_float(audio_file *aufile, void *sample_buffer,
 
     aufile->total_samples += samples;
 
+	if(sample_buffer){
     if (aufile->channels == 6 && aufile->channelMask)
     {
         for (i = 0; i < samples; i += aufile->channels)
@@ -491,8 +519,11 @@ static int write_audio_float(audio_file *aufile, void *sample_buffer,
         data[i*4+2] |= (mantissa >> 16) & 0x7F;
         data[i*4+3] |= (exponent >> 1) & 0x7F;
     }
+	}else{
+		memset(data, 0, samples * aufile->bits_per_sample/8);
+	}
 
-    ret = fwrite(data, samples, aufile->bits_per_sample/8, aufile->sndfile);
+    ret = fwrite(data, aufile->bits_per_sample/8, samples, aufile->sndfile);
 
     if (data) free(data);
 

@@ -51,11 +51,17 @@ typedef struct
     unsigned int channels;
     unsigned long total_samples;
     long channelMask;
+	double base_PTS;
 } audio_file;
+
+#define length_of_audio_file(af) ((af)->total_samples / (af)->channels * 1000.0 / (double)(af)->samplerate)
+#define shift_PTS_of_audio_file(af, sample) ((af)->base_PTS += (double)(sample) * 1000.0 / (af)->samplerate)
+
 
 audio_file *open_audio_file(char *infile, int samplerate, int channels,
                             int outputFormat, int fileType, long channelMask);
 int write_audio_file(audio_file *aufile, void *sample_buffer, int samples, int offset);
+int write_blank_audio_file(audio_file *aufile, int samples);
 void close_audio_file(audio_file *aufile);
 static int write_wav_header(audio_file *aufile);
 static int write_wav_extensible_header(audio_file *aufile, long channelMask);
